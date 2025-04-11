@@ -23,14 +23,49 @@ export function generateRecommendations(formData: FormData): GiftRecommendation[
   
   // Select top 6 gifts
   const topGifts = scoredGifts.slice(0, 6);
+
+  // Create a stable mapping of gift categories to images
+  const categoryImageMap: Record<string, string> = {
+    "technology": giftImages[0],
+    "home": giftImages[1],
+    "personal": giftImages[2],
+    "hobby": giftImages[3],
+    "experiences": giftImages[4]
+  };
+  
+  // Map specific interests to images for more context-appropriate images
+  const interestImageMap: Record<string, string> = {
+    "music": giftImages[5],
+    "art": giftImages[6],
+    "cooking": giftImages[7],
+    "reading": giftImages[8],
+    "travel": giftImages[9],
+    "fitness": giftImages[10],
+    "outdoors": giftImages[11],
+    "beauty": giftImages[1],  // Reusing some images is fine
+    "gaming": giftImages[3]
+  };
   
   // Generate detailed recommendations for the top gifts
-  return topGifts.map((scoredGift, index) => {
+  return topGifts.map((scoredGift) => {
+    // Try to find an image based on the gift's primary interest
+    let imageUrl = giftImages[0]; // Default image if no matches
+    
+    // First try to match by primary interest
+    const primaryInterest = scoredGift.gift.interests[0];
+    if (primaryInterest && interestImageMap[primaryInterest]) {
+      imageUrl = interestImageMap[primaryInterest];
+    } 
+    // Otherwise fall back to category
+    else if (categoryImageMap[scoredGift.gift.category]) {
+      imageUrl = categoryImageMap[scoredGift.gift.category];
+    }
+    
     return {
       title: scoredGift.gift.title,
       price: scoredGift.gift.priceRange[scoredGift.priceIndex],
       description: scoredGift.gift.description,
-      imageUrl: giftImages[index % giftImages.length],
+      imageUrl: imageUrl, // Use the contextually appropriate image
       explanation: generateExplanation(scoredGift.gift, formData),
       category: scoredGift.gift.category,
       url: generateFakeUrl(scoredGift.gift.title)
@@ -45,55 +80,29 @@ function scoreGifts(formData: FormData): ScoredGift[] {
   // Score each gift based on matching criteria
   for (const gift of giftDatabase) {
     let score = 0;
+    let isDisqualified = false;
     
-    // Check if gift is suitable for the age range
-    if (gift.ageRanges.includes(formData.recipientAge)) {
-      score += 10;
+    // CRITICAL CRITERIA - must match or gift is disqualified
+    
+    // Check if gift is suitable for the age range (critical match)
+    if (!gift.ageRanges.includes(formData.recipientAge)) {
+      isDisqualified = true;
     }
     
-    // Check if gift is appropriate for the occasion
-    if (gift.occasions.includes(formData.occasion)) {
-      score += 15;
+    // Check if gift is appropriate for the occasion (critical match)
+    if (!gift.occasions.includes(formData.occasion)) {
+      isDisqualified = true;
     }
     
-    // Check if gift matches interests
-    for (const interest of formData.interests) {
-      if (gift.interests.includes(interest)) {
-        score += 20;
-      }
+    // Check if gift is far outside budget (critical)
+    if (budgetIndex === 0 && gift.priceRange[0] !== "Under $25" && !gift.priceRange.includes("$25-$50")) {
+      isDisqualified = true; // Too expensive for lowest budget
+    } else if (budgetIndex === 4 && !gift.priceRange.includes("$250+") && 
+              !gift.priceRange.includes("$100-$250")) {
+      isDisqualified = true; // Too cheap for highest budget expectations
     }
     
-    // Check if other interests match
-    if (formData.otherInterests) {
-      const otherInterestsList = formData.otherInterests.toLowerCase().split(',').map(i => i.trim());
-      for (const otherInterest of otherInterestsList) {
-        for (const giftInterest of gift.interests) {
-          if (giftInterest.toLowerCase().includes(otherInterest) || otherInterest.includes(giftInterest.toLowerCase())) {
-            score += 10;
-          }
-        }
-      }
-    }
-    
-    // Check if gift matches preferred gift types
-    if (formData.giftTypes && formData.giftTypes.length > 0) {
-      for (const giftType of formData.giftTypes) {
-        if (gift.giftTypes.includes(giftType)) {
-          score += 15;
-        }
-      }
-    }
-    
-    // Check if gift is in the appropriate price range
-    if (budgetIndex >= 0 && budgetIndex < gift.priceRange.length) {
-      score += 25; // Strong match for budget
-    } else if (budgetIndex > 0 && budgetIndex - 1 < gift.priceRange.length) {
-      score += 10; // Lower price than budget, potentially ok
-    } else {
-      score -= 50; // Out of budget, significant penalty
-    }
-    
-    // Check if gift might be in the avoid list
+    // Check if gift is in avoid list (critical)
     if (formData.avoid) {
       const avoidList = formData.avoid.toLowerCase().split(',').map(i => i.trim());
       
@@ -101,10 +110,113 @@ function scoreGifts(formData: FormData): ScoredGift[] {
         if (
           gift.title.toLowerCase().includes(avoidItem) ||
           gift.description.toLowerCase().includes(avoidItem) ||
-          gift.category.toLowerCase().includes(avoidItem)
+          gift.category.toLowerCase().includes(avoidItem) ||
+          gift.interests.some(interest => interest.toLowerCase().includes(avoidItem))
         ) {
-          score -= 100; // Strong penalty for specifically avoided items
+          isDisqualified = true;
+          break;
         }
+      }
+    }
+    
+    // If disqualified, skip scoring
+    if (isDisqualified) {
+      continue;
+    }
+    
+    // SCORING CRITERIA - enhance score for better matches
+    
+    // Interest matching - highest priority
+    let interestMatchCount = 0;
+    for (const interest of formData.interests) {
+      if (gift.interests.includes(interest)) {
+        score += 30; // Increased from 20
+        interestMatchCount++;
+      }
+    }
+    
+    // Bonus for matching multiple interests
+    if (interestMatchCount > 1) {
+      score += interestMatchCount * 15; // Additional bonus for each matched interest
+    }
+    
+    // Exact budget match is preferred
+    if (gift.priceRange.includes(formData.budget)) {
+      score += 25; // Strong match for budget
+    } else if (budgetIndex > 0 && gift.priceRange.includes(getBudgetString(budgetIndex - 1))) {
+      score += 10; // Lower price than budget, potentially ok
+    } else {
+      score -= 15; // Not ideal price match
+    }
+    
+    // Other interests
+    if (formData.otherInterests) {
+      const otherInterestsList = formData.otherInterests.toLowerCase().split(',').map(i => i.trim());
+      let otherInterestMatchCount = 0;
+      
+      for (const otherInterest of otherInterestsList) {
+        for (const giftInterest of gift.interests) {
+          if (giftInterest.toLowerCase().includes(otherInterest) || otherInterest.includes(giftInterest.toLowerCase())) {
+            score += 10;
+            otherInterestMatchCount++;
+            break; // Only count one match per interest
+          }
+        }
+      }
+      
+      // Bonus for matching multiple other interests
+      if (otherInterestMatchCount > 1) {
+        score += otherInterestMatchCount * 5;
+      }
+    }
+    
+    // Check if gift matches preferred gift types
+    if (formData.giftTypes && formData.giftTypes.length > 0) {
+      let giftTypeMatchCount = 0;
+      for (const giftType of formData.giftTypes) {
+        if (gift.giftTypes.includes(giftType)) {
+          score += 15;
+          giftTypeMatchCount++;
+        }
+      }
+      
+      // Bonus for matching multiple preferred gift types
+      if (giftTypeMatchCount > 1) {
+        score += giftTypeMatchCount * 10;
+      }
+    }
+    
+    // Personality matching
+    if (formData.personality) {
+      const personality = formData.personality.toLowerCase();
+      
+      // Creative/artistic personality
+      if ((personality.includes('creative') || personality.includes('artistic')) 
+          && (gift.interests.includes('art') || gift.giftTypes.includes('handmade'))) {
+        score += 20;
+      }
+      
+      // Practical/organized personality
+      if ((personality.includes('practical') || personality.includes('organized')) 
+          && gift.giftTypes.includes('practical')) {
+        score += 20;
+      }
+      
+      // Adventurous personality
+      if ((personality.includes('adventurous') || personality.includes('outgoing')) 
+          && (gift.interests.includes('outdoors') || gift.interests.includes('travel') || gift.giftTypes.includes('experiences'))) {
+        score += 20;
+      }
+      
+      // Thoughtful personality
+      if ((personality.includes('quiet') || personality.includes('thoughtful')) 
+          && (gift.giftTypes.includes('sentimental') || gift.interests.includes('reading'))) {
+        score += 20;
+      }
+      
+      // Luxury-oriented personality
+      if (personality.includes('luxury') && gift.giftTypes.includes('luxury')) {
+        score += 20;
       }
     }
     
@@ -120,6 +232,24 @@ function scoreGifts(formData: FormData): ScoredGift[] {
   
   // Sort gifts by score (highest first)
   return scoredGifts.sort((a, b) => b.score - a.score);
+}
+
+// Helper function to convert budget index back to string
+function getBudgetString(index: number): string {
+  switch (index) {
+    case 0:
+      return "Under $25";
+    case 1:
+      return "$25-$50";
+    case 2:
+      return "$50-$100";
+    case 3:
+      return "$100-$250";
+    case 4:
+      return "$250+";
+    default:
+      return "$50-$100"; // Default to middle range
+  }
 }
 
 function getBudgetIndex(budget: string): number {
