@@ -1,4 +1,3 @@
-import { Link } from 'wouter';
 import { Gift, Facebook, Twitter, Instagram, Linkedin, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,47 +8,45 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-8">
           <div>
-            <Link href="/">
-              <a className="text-2xl font-heading font-bold flex items-center mb-4">
-                <Gift className="mr-2" />
-                GiftWhisperer
-              </a>
-            </Link>
+            <div className="text-2xl font-heading font-bold flex items-center mb-4 cursor-pointer" onClick={() => window.location.href = '/'}>
+              <Gift className="mr-2" />
+              GiftWhisperer
+            </div>
             <p className="text-gray-300 mb-4">Find the perfect gift for every occasion with our AI-powered recommendations.</p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-300 hover:text-white transition">
+              <div className="text-gray-300 hover:text-white transition cursor-pointer">
                 <Facebook size={20} />
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition">
+              </div>
+              <div className="text-gray-300 hover:text-white transition cursor-pointer">
                 <Twitter size={20} />
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition">
+              </div>
+              <div className="text-gray-300 hover:text-white transition cursor-pointer">
                 <Instagram size={20} />
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition">
+              </div>
+              <div className="text-gray-300 hover:text-white transition cursor-pointer">
                 <Linkedin size={20} />
-              </a>
+              </div>
             </div>
           </div>
           
           <div>
             <h3 className="font-heading font-semibold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="#how-it-works" className="text-gray-300 hover:text-white transition">How It Works</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Gift Ideas</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Occasions</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Gift Guides</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Blog</a></li>
+              <li><div onClick={() => document.getElementById('how-it-works')?.scrollIntoView({behavior: 'smooth'})} className="text-gray-300 hover:text-white transition cursor-pointer">How It Works</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Gift Ideas</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Occasions</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Gift Guides</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Blog</div></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-heading font-semibold text-lg mb-4">Help & Support</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-300 hover:text-white transition">FAQs</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Contact Us</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition">Terms of Service</a></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">FAQs</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Contact Us</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Privacy Policy</div></li>
+              <li><div className="text-gray-300 hover:text-white transition cursor-pointer">Terms of Service</div></li>
             </ul>
           </div>
           
